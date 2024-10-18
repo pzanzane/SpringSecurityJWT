@@ -46,6 +46,15 @@ public class JWTService {
         return buildToken(extraClaims, userDetails, secretKey, jwtSecretExpiration);
     }
 
+    public boolean isTokenValid(final String token, final UserDetails userDetails) {
+        final String userName = extractUserName(token);
+        return (userName.equals(userDetails.getUsername()) && !isTokenExpired(token));
+    }
+
+    private String extractUserName(final String token) {
+        return extractAllClaims(token).getSubject();
+    }
+
     private String buildToken(Map<String, Object> extraClaims,
                               UserDetails userDetails,
                               String secretKey,
@@ -62,6 +71,7 @@ public class JWTService {
     private Key getSignKey(String secretKey) {
         return Keys.hmacShaKeyFor(Decoders.BASE64.decode(secretKey));
     }
+
 
     private boolean isTokenExpired(String token) {
         return extractExpiration(token).before(new Date());
