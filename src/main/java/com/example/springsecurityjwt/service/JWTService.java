@@ -6,14 +6,16 @@ import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
+import org.apache.logging.log4j.util.Strings;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UserDetailsService;
 
 import java.security.Key;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.function.Function;
+import java.util.Objects;
 
 /**
  * Responsible to generate the JWT Token.
@@ -26,7 +28,6 @@ public class JWTService {
 
     @Value("${security.jwt.expiration-time}")
     private long jwtSecretExpiration;
-
 
     /**
      * Responsible to generate JWT token with empty claims.
@@ -46,12 +47,31 @@ public class JWTService {
         return buildToken(extraClaims, userDetails, secretKey, jwtSecretExpiration);
     }
 
-    public boolean isTokenValid(final String token, final UserDetails userDetails) {
+    public boolean isUserValid(final String token, final UserDetails userDetails) {
         final String userName = extractUserName(token);
         return (userName.equals(userDetails.getUsername()) && !isTokenExpired(token));
     }
 
-    private String extractUserName(final String token) {
+    public boolean isTokenValid(final String token) {
+
+        if (isTokenExpired(token)) {
+            return false;
+        }
+
+        final String userName = extractUserName(token);
+
+        if (Objects.isNull(userName) || Strings.isEmpty(userName)) {
+            return false;
+        }
+
+        return true;
+    }
+
+    private boolean isTokenExpired(String token) {
+        return extractExpiration(token).before(new Date());
+    }
+
+    public String extractUserName(final String token) {
         return extractAllClaims(token).getSubject();
     }
 
@@ -73,9 +93,7 @@ public class JWTService {
     }
 
 
-    private boolean isTokenExpired(String token) {
-        return extractExpiration(token).before(new Date());
-    }
+
 
     private Date extractExpiration(final String token) {
         return extractAllClaims(token).getExpiration();
